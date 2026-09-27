@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import requests
+from core.http_client import DEFAULT_TIMEOUT, create_session
 
 
 REQUEST_TIMEOUT = 10
@@ -24,7 +25,8 @@ def _target_url(target_input: str) -> str:
 
 def _add_finding(findings: List[Dict[str, str]], name: str, evidence: str, category: str) -> None:
     if not any(item["name"] == name and item["category"] == category for item in findings):
-        findings.append({"name": name, "category": category, "evidence": evidence[:180]})
+        confidence = "likely" if category == "cookie" else "possible"
+        findings.append({"name": name, "category": category, "evidence": evidence[:180], "confidence": confidence})
 
 
 def fingerprint_technology(target_input: str) -> Dict[str, Any]:
@@ -32,12 +34,7 @@ def fingerprint_technology(target_input: str) -> Dict[str, Any]:
     findings: List[Dict[str, str]] = []
 
     try:
-        response = requests.get(
-            target_url,
-            timeout=REQUEST_TIMEOUT,
-            allow_redirects=True,
-            headers={"User-Agent": "Signal-Recon/1.0"},
-        )
+        response = create_session().get(target_url, timeout=DEFAULT_TIMEOUT, allow_redirects=True)
         headers = {key.lower(): value for key, value in response.headers.items()}
         body = response.text[:500000]
 

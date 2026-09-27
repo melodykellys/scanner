@@ -1,6 +1,7 @@
 import requests
 from typing import Dict, Any
 import re
+from core.http_client import DEFAULT_TIMEOUT, create_session
 
 RECOMMENDED_HEADERS = {
     "Strict-Transport-Security": {
@@ -54,12 +55,18 @@ def _header_quality(header: str, value: str) -> str | None:
     normalized_value = value.strip().lower()
 
     if header == "Strict-Transport-Security":
-        match = re.search(r"max-age\s*=\s*(\d+)", normalized_value)
-        if not match or int(match.group(1)) < 15_552_000:
+        max_age_values = [int(item) for item in re.findall(r"max-age\s*=\s*(\d+)", normalized_value)]
+        if len(max_age_values) != 1:
+            return "HSTS contains conflicting or repeated max-age directives."
+        if max_age_values[0] < 15_552_000:
             return "HSTS is present but max-age is shorter than six months."
     elif header == "Content-Security-Policy":
         if "default-src" not in normalized_value and "script-src" not in normalized_value:
             return "CSP is present but does not define default-src or script-src."
+        if "'unsafe-eval'" in normalized_value or "'unsafe-inline'" in normalized_value:
+            return "CSP permits unsafe-inline or unsafe-eval, reducing protection against script injection."
+        if re.search(r"\b[a-z]+://", normalized_value):
+            return "CSP allows at least one explicit network source; review whether every source is required and HTTPS-only."
     elif header == "X-Frame-Options":
         if normalized_value not in {"deny", "sameorigin"}:
             return "X-Frame-Options should be DENY or SAMEORIGIN."
@@ -115,12 +122,7 @@ def analyze_headers(target_url: str) -> Dict[str, Any]:
         target_url = f"https://{target_url}"
 
     try:
-        response = requests.get(
-            target_url,
-            timeout=5,
-            allow_redirects=True,
-            headers={"User-Agent": USER_AGENT},
-        )
+        response = create_session().get(target_url, timeout=DEFAULT_TIMEOUT, allow_redirects=True)
         normalized_headers = {key.lower(): value for key, value in response.headers.items()}
 
         present_headers = {}

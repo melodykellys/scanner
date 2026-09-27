@@ -62,4 +62,4 @@ def harvest_archived_urls(target_input: str) -> Dict[str, Any]:
             "urls": archived_urls,
         }
     except (requests.RequestException, ValueError) as error:
-        return {"status": "error", "domain": domain, "message": str(error)}
+        return {"status": "error", "domain": domain, "source_status": "unavailable", "message": str(error)}

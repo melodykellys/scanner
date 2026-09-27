@@ -69,14 +69,22 @@ function renderResults(data) {
 
     document.getElementById('resTarget').innerText = headerData.target || 'N/A';
     document.getElementById('resStatus').innerText = headerData.status_code || 'N/A';
-
+    const scanSummary = data.summary || {};
+    const confidenceCounts = scanSummary.confidence_counts || {};
+    const scanFindings = document.getElementById('scanFindings');
+    const scanConfidence = document.getElementById('scanConfidence');
+    if (scanFindings) scanFindings.innerText = scanSummary.deduplicated ? `${scanSummary.finding_count || 0} deduplicated` : 'Unavailable';       
+    if (scanConfidence) {
+        scanConfidence.innerText = `L ${confidenceCounts.likely || 0} / P ${confidenceCounts.possible || 0} / U ${confidenceCounts.unverified || 0}`;
+    }
+  
     const subdomainSource = document.getElementById('subdomainSource');
     const subdomainsList = document.getElementById('subdomainsList');
     if (subdomainSource && subdomainsList) {
-        if (subdomainData?.status === 'success') {
+        if (subdomainData?.status === 'success') {  
             subdomainSource.innerText = `${subdomainData.source || 'Certificate Transparency logs'} (${subdomainData.count || 0} found)`;
         } else if (subdomainData?.status === 'error') {
-            subdomainSource.innerText = 'Discovery failed';
+            subdomainSource.innerText = subdomainData.source_status === 'unavailable' ? 'Source unavailable' : 'Discovery failed';
         } else {
             subdomainSource.innerText = 'No discovery response';
         }
@@ -84,7 +92,10 @@ function renderResults(data) {
         if (subdomainData?.status === 'success' && Array.isArray(subdomainData.subdomains) && subdomainData.subdomains.length) {
             subdomainsList.innerHTML = subdomainData.subdomains.map(subdomain => {
                 const addresses = subdomain.addresses.length ? ` (${subdomain.addresses.join(', ')})` : ' (no DNS record)';
-                return `<li><strong>${escapeHTML(subdomain.hostname)}</strong>${escapeHTML(addresses)}</li>`;
+                const httpState = subdomain.http_verified
+                    ? `HTTP ${subdomain.http_status}`
+                    : 'HTTP not verified';
+                return `<li><strong>${escapeHTML(subdomain.hostname)}</strong>${escapeHTML(addresses)} <span>${escapeHTML(subdomain.confidence || 'unverified')} / ${escapeHTML(httpState)}</span></li>`;
             }).join('');
         } else {
             const message = subdomainData?.status === 'success'
@@ -97,10 +108,12 @@ function renderResults(data) {
     // Directory Discovery
     const directoryList = document.getElementById('directoryList');
     if (directoryList) {
-        if (directoryData?.status === 'success' && Array.isArray(directoryData.paths) && directoryData.paths.length) {
+        if (['success', 'partial'].includes(directoryData?.status) && Array.isArray(directoryData.paths) && directoryData.paths.length) {
             directoryList.innerHTML = directoryData.paths.map(item =>
-                `<li><strong>${escapeHTML(item.path)}</strong> → ${escapeHTML(item.url)} (HTTP ${escapeHTML(String(item.status_code))})</li>`
+                `<li><strong>${escapeHTML(item.path)}</strong> &rarr; ${escapeHTML(item.url)} (HTTP ${escapeHTML(String(item.status_code))}) <span>${escapeHTML(item.confidence || 'unverified')} / ${escapeHTML(item.category || 'endpoint')}</span></li>`
             ).join('');
+        } else if (directoryData?.status === 'partial') {
+            directoryList.innerHTML = `<li>${escapeHTML(directoryData.message || 'Directory results are partially verified.')}</li>`;
         } else {
             directoryList.innerHTML = '<li>No likely sensitive paths found in the current common target list.</li>';
         }
@@ -118,7 +131,17 @@ function renderResults(data) {
                 findings.push(`<li><strong>Endpoints:</strong> ${escapeHTML(jsApiData.endpoints.slice(0, 5).join(', '))}</li>`);
             }
             if (Array.isArray(jsApiData.possible_secrets) && jsApiData.possible_secrets.length) {
-                findings.push(`<li><strong>Possible secrets:</strong> ${escapeHTML(jsApiData.possible_secrets.slice(0, 5).join(', '))}</li>`);
+                findings.push(`<li><strong>Possible secrets:</strong> ${escapeHTML(jsApiData.possible_secrets.slice(0, 5).join(', '))} <span>${escapeHTML(jsApiData.possible_secret_confidence || 'possible')}</span></li>`);
+            }
+            if (Array.isArray(jsApiData.public_client_keys) && jsApiData.public_client_keys.length) {
+                const publicKeys = jsApiData.public_client_keys.slice(0, 5).map(item => `${item.name} (${item.masked_value})`).join(', ');
+                findings.push(`<li><strong>Public client-side keys:</strong> ${escapeHTML(publicKeys)} <span>Informational; review provider restrictions and quotas.</span></li>`);
+            }
+            if (Array.isArray(jsApiData.waf_artifacts) && jsApiData.waf_artifacts.length) {
+                findings.push(`<li><strong>WAF artifacts:</strong> ${escapeHTML(String(jsApiData.waf_artifacts.length))} challenge-related URL(s) excluded from endpoint findings.</li>`);
+            }
+            if (jsApiData.verification) {
+                findings.push(`<li><span>${escapeHTML(jsApiData.verification)}</span></li>`);
             }
             jsApiList.innerHTML = findings.length ? findings.join('') : '<li>No JavaScript or API clues were found.</li>';
         } else {
@@ -132,7 +155,7 @@ function renderResults(data) {
         if (archiveData?.status === 'success') {
             archiveSource.innerText = `${archiveData.source || 'Internet Archive'} (${archiveData.count || 0} found)`;
         } else {
-            archiveSource.innerText = archiveData?.status === 'error' ? 'Archive lookup failed' : 'No archive response';
+            archiveSource.innerText = archiveData?.source_status === 'unavailable' ? 'Source unavailable' : archiveData?.status === 'error' ? 'Archive lookup failed' : 'No archive response';
         }
 
         if (archiveData?.status === 'success' && Array.isArray(archiveData.urls) && archiveData.urls.length) {
@@ -150,7 +173,7 @@ function renderResults(data) {
         technologyTarget.innerText = technologyData?.target || 'Unavailable';
         if (technologyData?.status === 'success' && Array.isArray(technologyData.technologies) && technologyData.technologies.length) {
             technologyList.innerHTML = technologyData.technologies.map(item =>
-                `<li><strong>${escapeHTML(item.name)}</strong> <span>${escapeHTML(item.category)} / ${escapeHTML(item.evidence)}</span></li>`
+                `<li><strong>${escapeHTML(item.name)}</strong> <span>${escapeHTML(item.confidence || 'possible')} / ${escapeHTML(item.category)} / ${escapeHTML(item.evidence)}</span></li>`
             ).join('');
         } else {
             technologyList.innerHTML = `<li>${escapeHTML(technologyData?.message || 'No technology signatures identified.')}</li>`;
@@ -251,4 +274,3 @@ function escapeHTML(str) {
     if (typeof str !== 'string') return str;
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
-

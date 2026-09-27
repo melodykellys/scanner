@@ -7,6 +7,7 @@ from core.directory_discovery import discover_directory_paths
 from core.header_checker import analyze_headers
 from core.js_api_analysis import analyze_js_and_api
 from core.port_scanner import scan_ports
+from core.result_scoring import build_scan_summary
 from core.subdomain_enumerator import enumerate_subdomains
 from core.technology_fingerprint import fingerprint_technology
 
@@ -34,7 +35,7 @@ def run_scan(request: ScanRequest):
         archive_results = archive_task.result()
         technology_results = technology_task.result()
 
-    return {
+    scan_results = {
         "headers": header_results,
         "ports": port_results,
         "subdomains": subdomain_results,
@@ -43,3 +44,5 @@ def run_scan(request: ScanRequest):
         "archives": archive_results,
         "technology": technology_results,
     }                 
+    scan_results["summary"] = build_scan_summary(scan_results)
+    return scan_results
