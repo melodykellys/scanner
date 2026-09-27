@@ -9,7 +9,7 @@ def scan_ports(target_input: str) -> Dict[str, Any]:
     else:
         domain = target_input.split('/')[0]
 
-    nm = nmap.PortScanner()
+    nm = nmap.PortScanner()      
     
     try:
         # Scan common web/infra ports with service version detection
@@ -35,6 +35,14 @@ def scan_ports(target_input: str) -> Dict[str, Any]:
                         "service": port_info.get("name", "unknown"),
                         "version": f"{port_info.get('product', '')} {port_info.get('version', '')}".strip() or "N/A"
                     })
+
+        if host_ip == "Unknown":
+            return {
+                "status": "partial",
+                "host_ip": host_ip,
+                "open_ports": open_ports,
+                "message": "The port scanner completed without confirming a host response.",
+            }
 
         return {
             "status": "success",

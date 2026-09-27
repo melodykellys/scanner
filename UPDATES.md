@@ -109,6 +109,38 @@ The scanner can use multiple HTML pages if the report grows beyond one screen. T
 ```bash
 Integrated a new system check script; details on this update will follow shortly.
 ```
+
+## Accuracy and Security Update - 2026-09-27
+
+### Result Confidence and Verification
+
+- Added deduplicated scan summaries with confidence counts and a ranked list of findings.
+- Directory findings now lose confidence when the missing-path baseline cannot be verified.
+- File-like paths that return generic HTML are classified as unverified responses rather than likely file exposure.
+- Subdomain discovery checks DNS and HTTP reachability and normalizes `www.` targets to their parent domain for Certificate Transparency lookups.
+- External Certificate Transparency and Internet Archive failures are identified as unavailable-source results rather than zero findings.
+- Port scans without a resolved host are reported as partial instead of successful.
+
+### HTTP and Header Accuracy
+
+- Added a shared browser-like HTTP session with bounded retries for transient connection and service errors.
+- HSTS validation detects repeated or conflicting `max-age` directives.
+- CSP validation reports risky `unsafe-inline` and `unsafe-eval` directives.
+
+### JavaScript and API Classification
+
+- Filters WAF challenge URLs and unusually long opaque paths from endpoint candidates.
+- Restricts extracted absolute endpoints to the scanned host and removes API-key query values from endpoint output.
+- Classifies Google-style browser keys separately as informational public client-side keys; they are not counted as possible secrets by themselves.
+- Keeps likely credential matches masked and separate from public browser keys.
+
+### Reporting and Security Guidance
+
+- JSON export retains the complete structured scan response, including WAF and public-key classifications.
+- Print/PDF output includes the new classifications, and the frontend script cache version was bumped so the updated report renderer loads.
+- Added `SECURITY.md` with vulnerability-reporting guidance, authorized-use rules, data-handling notes, scanner limitations, and deployment cautions for the unauthenticated scan API.
+- Validated the new classification behavior, summary exclusion, Python compilation, and JavaScript syntax with focused checks.
+
 ## Next Session
 
 Continue with scanner improvements and validation of the completed reconnaissance and reporting features.
