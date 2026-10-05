@@ -3,7 +3,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 
-BROWSER_USER_AGENT = (
+BROWSER_USER_AGENT = (    
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/131.0 Safari/537.36"
 )

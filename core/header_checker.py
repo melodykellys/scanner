@@ -3,7 +3,7 @@ from typing import Dict, Any
 import re
 from core.http_client import DEFAULT_TIMEOUT, create_session
 
-RECOMMENDED_HEADERS = {
+RECOMMENDED_HEADERS = {           
     "Strict-Transport-Security": {
         "desc": "HSTS enforces HTTPS connections.",
         "nginx": "add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains\" always;",
@@ -73,7 +73,7 @@ def _header_quality(header: str, value: str) -> str | None:
     elif header == "X-Content-Type-Options":
         if normalized_value != "nosniff":
             return "X-Content-Type-Options should be nosniff."
-    elif header == "Referrer-Policy":
+    elif header == "Referrer-Policy":   
         valid_policies = {
             "no-referrer", "no-referrer-when-downgrade", "origin", "origin-when-cross-origin",
             "same-origin", "strict-origin", "strict-origin-when-cross-origin", "unsafe-url",

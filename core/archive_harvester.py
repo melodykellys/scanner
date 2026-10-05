@@ -5,7 +5,7 @@ import requests
 
 
 MAX_ARCHIVED_URLS = 100
-ARCHIVE_TIMEOUT = 12
+ARCHIVE_TIMEOUT = 12 
 
 
 def _get_hostname(target_input: str) -> str:
