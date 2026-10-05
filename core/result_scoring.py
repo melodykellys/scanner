@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 
 CONFIDENCE_SCORES = {
-    "confirmed": 1.0,
+    "confirmed": 1.0,     
     "likely": 0.8,
     "possible": 0.5,
     "unverified": 0.1,

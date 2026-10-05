@@ -8,7 +8,7 @@ from core.http_client import DEFAULT_TIMEOUT, create_session
 
 
 MAX_JS_FILES = 10                     
-MAX_ENDPOINTS = 50
+MAX_ENDPOINTS = 50    
 MAX_SECRET_FINDINGS = 20
 MAX_ENDPOINT_LENGTH = 180
 MAX_OPAQUE_SEGMENT_LENGTH = 80
@@ -46,10 +46,10 @@ def _extract_js_links(html: str) -> List[str]:
 def _extract_endpoints(html: str, allowed_host: str | None = None) -> List[str]:
     patterns = [
         r"https?://[A-Za-z0-9._:/?=&%\-]+",
-        r"/(?:api|graphql|v[0-9]+|auth|oauth|login|users|admin)[A-Za-z0-9_/?=&%\-.]*",
+        r"/(?:api|graphql|v[0-9]+|auth|oauth|login|users|admin)[A-Za-z0-9_/?=&%\-.]*", 
     ]
-    endpoints = set()
-    for pattern in patterns:
+    endpoints = set() 
+    for pattern in patterns:  
         for match in re.findall(pattern, html, flags=re.IGNORECASE):
             path = match.split("#", 1)[0]
             path = re.sub(r"([?&](?:api[_-]?key|key)=)[^&]*", "", path, flags=re.IGNORECASE).rstrip("?&")
@@ -68,7 +68,7 @@ def _extract_endpoints(html: str, allowed_host: str | None = None) -> List[str]:
                 continue
             if "http" in path or path.startswith("/"):
                 endpoints.add(path)
-    return sorted(endpoints)[:MAX_ENDPOINTS]
+    return sorted(endpoints)[:MAX_ENDPOINTS]  
 
 
 def _is_waf_artifact(value: str) -> bool:

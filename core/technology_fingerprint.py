@@ -12,7 +12,7 @@ COOKIE_TECHNOLOGIES = {
     "JSESSIONID": "Java / Servlet",
     "ASP.NET_SessionId": "ASP.NET",
     "laravel_session": "Laravel",
-    "wordpress_logged_in": "WordPress",
+    "wordpress_logged_in": "WordPress", 
 }
 
 
