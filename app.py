@@ -10,5 +10,3 @@ app.include_router(scan.router)
 
 # Serve static frontend files
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
-
