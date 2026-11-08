@@ -1,0 +1,70 @@
+name: 'SOC Web Recon & Hardening Audit'
+description: 'Audits HTTP security headers, detects server banner disclosures, and runs port recon in your CI/CD pipeline.'
+author: 'melodykellys'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  target-url:
+    description: 'The target URL or domain to audit (e.g., https://staging.example.com)'
+    required: true
+  fail-on-missing-headers:
+    description: 'Whether to fail the workflow build if critical headers (HSTS, CSP) are missing'
+    required: false
+    default: 'false'
+
+outputs:
+  scan-results-json:
+    description: 'Raw JSON string containing all findings'
+  security-score:
+    description: 'Calculated security grade'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install System & Python Dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y nmap
+        python -m pip install --upgrade pip
+        pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Run Recon Scanner
+      shell: bash
+      run: |
+        python ${{ github.action_path }}/cli.py --target "${{ inputs.target-url }}" --output scan_report.json
+
+    - name: Post PR Comment
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('scan_report.json', 'utf8'));
+          
+          let commentBody = `### 🛡️ SOC Web Recon Audit Report for \`${process.env.TARGET_URL}\`\n\n`;
+          commentBody += `**Security Score:** ${report.score || 'Evaluated'}\n\n`;
+          
+          if (report.missing_headers && report.missing_headers.length > 0) {
+            commentBody += `⚠️ **Missing Security Headers:**\n`;
+            report.missing_headers.forEach(h => commentBody += `- \`${h}\`\n`);
+            commentBody += `\n**Recommended Nginx Fix:**\n\`\`\`nginx\n${report.nginx_remediation}\n\`\`\`\n`;
+          } else {
+            commentBody += `✅ All primary security headers are properly configured!\n`;
+          }
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: commentBody
+          });
+      env:
+        TARGET_URL: ${{ inputs.target-url }}
